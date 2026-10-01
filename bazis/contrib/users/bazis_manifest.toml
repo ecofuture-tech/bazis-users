@@ -1,0 +1,45 @@
+# What the package is for and how to use it, for tools and AI agents (see AGENTS.md).
+# `import` paths and `check` ids are verified by tests/test_manifest.py.
+
+[package]
+name = "bazis-users"
+summary = "users, session JWT authentication and routes that know the current user"
+solves = [
+    "user accounts and login by username and password",
+    "authentication by JWT (header, query parameter or cookie)",
+    "routes that need the current user or require authentication",
+]
+requires = ["bazis"]
+pairs_well = ["bazis-permit", "bazis-authing", "bazis-author"]
+
+[[extension_points]]
+name = "UserAbstract"
+import = "bazis.contrib.users.models_abstract.UserAbstract"
+use_when = "the user model of the project (with JsonApiMixin, UuidMixin)"
+
+[[extension_points]]
+name = "UsersConfig"
+import = "bazis.contrib.users.apps.UsersConfig"
+use_when = "the AppConfig of the project app that holds the user model"
+
+[[extension_points]]
+name = "UserRouteBase"
+import = "bazis.contrib.users.routes_abstract.UserRouteBase"
+use_when = "a route that needs the current user (self.inject.user)"
+
+[[extension_points]]
+name = "UserRequiredRouteBase"
+import = "bazis.contrib.users.routes_abstract.UserRequiredRouteBase"
+use_when = "a route that requires authentication"
+
+[[extension_points]]
+name = "get_user_required"
+import = "bazis.contrib.users.service.get_user_required"
+use_when = "a FastAPI dependency for the authenticated user in a custom endpoint"
+
+[[pitfalls]]
+text = "the user model must inherit UserAbstract and be set in BS_AUTH_USER_MODEL"
+check = "users.E001"
+
+[[pitfalls]]
+text = "groups, permissions and is_staff must not be writable by the user himself"
