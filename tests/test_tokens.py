@@ -133,3 +133,31 @@ def test_token_without_expiration_is_anonymous(sample_app, user):
     token = _token({'sub': user.username})
     assert get_token_data(token_header=None, token_param=None, token_cookie=token) == {}
     assert _get_me(sample_app, token).status_code == 401
+
+
+@pytest.mark.django_db(transaction=True)
+def test_user_cannot_grant_himself_groups(sample_app, user):
+    """
+    groups and user_permissions are excluded from the user schema: the relationships
+    endpoints must not change them (privilege escalation through Django permissions).
+    """
+    from django.contrib.auth.models import Group, Permission
+
+    admins = Group.objects.create(name='admins')
+    admins.permissions.set(Permission.objects.all())
+    client = get_api_client(sample_app, user.jwt_build())
+
+    response = client.post(
+        f'/api/v1/users/user/{user.id}/relationships/groups',
+        json_data={'data': [{'id': str(admins.id), 'type': 'auth.group'}]},
+    )
+    assert response.status_code == 403
+    assert not user.groups.exists()
+
+    permission = Permission.objects.first()
+    response = client.post(
+        f'/api/v1/users/user/{user.id}/relationships/user_permissions',
+        json_data={'data': [{'id': str(permission.id), 'type': 'auth.permission'}]},
+    )
+    assert response.status_code == 403
+    assert not user.user_permissions.exists()
