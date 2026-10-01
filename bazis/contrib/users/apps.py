@@ -26,3 +26,7 @@ class UsersConfig(BaseConfig):
 
     name = 'bazis.contrib.users'
     verbose_name = _('Users')
+
+    def ready(self):
+        super().ready()
+        from . import checks  # noqa: F401  registers the system checks
