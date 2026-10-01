@@ -20,8 +20,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-from jose import JWTError, jwt
-from jose.exceptions import ExpiredSignatureError
+import jwt
 
 from bazis.core.errors import JsonApi401Exception
 
@@ -30,6 +29,23 @@ from . import get_anonymous_user_model, get_user_model
 
 User = get_user_model() # noqa: N806
 AnonymousUser = get_anonymous_user_model()
+
+
+def decode_token(token: str) -> dict:
+    """
+    Decodes and verifies a session JWT built by `UserAbstract.jwt_build`.
+    Raises `jwt.ExpiredSignatureError` for an expired token and `jwt.InvalidTokenError`
+    for any other invalid token. Tokens without an expiration time or a subject are
+    rejected.
+    """
+    return jwt.decode(
+        token,
+        settings.SECRET_KEY,
+        algorithms=[settings.BAZIS_JWT_SESSION_ALG],
+        # iat is informational: checking it would reject tokens issued by a server whose
+        # clock is slightly ahead
+        options={'require': ['exp', 'sub'], 'verify_iat': False},
+    )
 
 
 def get_token_data(
@@ -49,10 +65,10 @@ def get_token_data(
     if not token:
         return {}
     try:
-        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.BAZIS_JWT_SESSION_ALG])
-    except ExpiredSignatureError:
+        return decode_token(token)
+    except jwt.ExpiredSignatureError:
         raise JsonApi401Exception(detail=str(_('Token has expired'))) from None
-    except JWTError:
+    except jwt.InvalidTokenError:
         raise JsonApi401Exception(detail=str(_('Token is invalid'))) from None
 
 

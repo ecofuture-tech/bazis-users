@@ -33,13 +33,14 @@ classifiers = [
     "Framework :: FastAPI",
 ]
 dependencies = [
-    "bazis",
-    "python-multipart",
+    "bazis>=2.3.0",
+    "python-multipart>=0.0.18",
+    "PyJWT>=2.10",
 ]
 
 [project.optional-dependencies]
 test = [
-    "bazis-test-utils"
+    "bazis-test-utils>=2.3.0"
 ]
 dev = [
     "ruff"

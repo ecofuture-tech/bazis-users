@@ -32,6 +32,11 @@ class UserRequestMiddleware:
         Processes the incoming request, setting the user in the context if the user is
         authenticated, and then passes the request to the next middleware or view.
         """
-        if request.user and getattr(request.user, 'is_anonymous', None) is False:
-            UserMixin.CTX_USER_REQUEST.set(request.user)
-        return self.get_response(request)
+        # the context is reset after the response: a WSGI server reuses its threads,
+        # so a user left in the context would be seen by the next request of the thread
+        user = request.user if getattr(request.user, 'is_anonymous', None) is False else None
+        token = UserMixin.CTX_USER_REQUEST.set(user)
+        try:
+            return self.get_response(request)
+        finally:
+            UserMixin.CTX_USER_REQUEST.reset(token)
