@@ -23,6 +23,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from bazis.core.app import app
+from bazis.core.errors import JsonApi403Exception
 from bazis.core.routes_abstract.initial import inject_make
 from bazis.core.routes_abstract.jsonapi import JsonapiRouteBase
 from bazis.core.schemas import CrudApiAction, SchemaFields, SchemaInclusion, SchemaInclusions
@@ -80,6 +81,52 @@ class UserRouteSet(JsonapiRouteBase):
             },
         ),
     }
+
+    #: the fields only a superuser can set
+    privileged_fields = ('is_staff', 'is_superuser', 'is_active')
+
+    def get_queryset(self):
+        """
+        A user who is not staff sees and changes only himself.
+        """
+        queryset = super().get_queryset()
+        if not self.inject.user.is_staff:
+            queryset = queryset.filter(pk=self.inject.user.pk)
+        return queryset
+
+    def check_privileged_fields(self, item, before: dict):
+        if self.inject.user.is_superuser:
+            return
+        for field in self.privileged_fields:
+            if getattr(item, field) != before[field]:
+                raise JsonApi403Exception(detail=str(_('Only a superuser can change %s')) % field)
+
+    def hook_before_create(self, item):
+        if not self.inject.user.is_staff:
+            raise JsonApi403Exception()
+        super().hook_before_create(item)
+
+    def hook_after_create(self, item):
+        # inside the transaction: the error rolls the creation back
+        super().hook_after_create(item)
+        self.check_privileged_fields(
+            item, {'is_staff': False, 'is_superuser': False, 'is_active': True}
+        )
+
+    def hook_before_update(self, item):
+        super().hook_before_update(item)
+        # the data is not applied yet
+        self._privileged_before = {field: getattr(item, field) for field in self.privileged_fields}
+
+    def hook_after_update(self, item):
+        # inside the transaction: the error rolls the change back
+        super().hook_after_update(item)
+        self.check_privileged_fields(item, self._privileged_before)
+
+    def destroy(self, item_id: str):
+        if not self.inject.user.is_staff:
+            raise JsonApi403Exception()
+        return super().destroy(item_id)
 
     inclusions = {
         CrudApiAction.RETRIEVE: SchemaInclusions(
