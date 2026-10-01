@@ -206,26 +206,33 @@ class MyUserRouteSet(UserRouteSet):
 
 Services for working with users and tokens.
 
-**Location**: `bazis.contrib.users.services`
+**Location**: `bazis.contrib.users.service`
 
 #### get_token_data
 
-Extracts data from JWT token.
+Extracts data from the JWT token. The token is read from the `bazis_auth` query parameter,
+the `Authorization: Bearer` header or the `bazis_auth` cookie (the name is
+`BAZIS_AUTH_COOKIE_NAME`). It must be signed with `SECRET_KEY` using
+`BAZIS_JWT_SESSION_ALG` (`HS256`, `HS384` or `HS512`) and contain `exp` and `sub`
+(the username); otherwise the request fails with 401. Without a token the result is `{}`.
 
 ```python
-from bazis.contrib.users.services import get_token_data
+from bazis.contrib.users.service import get_token_data
 
-def my_endpoint(token: str = Depends(get_token_data)):
-    user_id = token.get('user_id')
+def my_endpoint(token: dict = Depends(get_token_data)):
+    username = token.get('sub')
     # Work with token data
 ```
+
+`decode_token(token)` verifies a token outside of a request and raises
+`jwt.ExpiredSignatureError` / `jwt.InvalidTokenError`.
 
 #### get_user_from_token
 
 Gets user from token.
 
 ```python
-from bazis.contrib.users.services import get_user_from_token
+from bazis.contrib.users.service import get_user_from_token
 
 def my_endpoint(user = Depends(get_user_from_token)):
     # user - user object or AnonymousUser
@@ -237,7 +244,7 @@ def my_endpoint(user = Depends(get_user_from_token)):
 Gets user from request (authentication required).
 
 ```python
-from bazis.contrib.users.services import get_user_required
+from bazis.contrib.users.service import get_user_required
 
 def my_endpoint(user = Depends(get_user_required)):
     # user - authenticated user
@@ -250,7 +257,7 @@ def my_endpoint(user = Depends(get_user_required)):
 Gets user from request (authentication optional).
 
 ```python
-from bazis.contrib.users.services import get_user_optional
+from bazis.contrib.users.service import get_user_optional
 
 def my_endpoint(user = Depends(get_user_optional)):
     # user - user or AnonymousUser
@@ -321,7 +328,7 @@ router.register(routes.MyUserRouteSet.as_router())
 Use `get_user_required` for endpoints that require authentication:
 
 ```python
-from bazis.contrib.users.services import get_user_required
+from bazis.contrib.users.service import get_user_required
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
@@ -346,7 +353,7 @@ def change_password(
 Use `get_user_optional` for endpoints available to everyone:
 
 ```python
-from bazis.contrib.users.services import get_user_optional, get_token_data
+from bazis.contrib.users.service import get_user_optional, get_token_data
 from fastapi import Depends
 
 @router.get('/auth/', response_model=AuthResponse)
@@ -369,14 +376,14 @@ def auth(
 Getting data from JWT token without loading the user:
 
 ```python
-from bazis.contrib.users.services import get_token_data
+from bazis.contrib.users.service import get_token_data
 from fastapi import Depends
 
 @router.get('/token-info/')
 def token_info(token_data: dict = Depends(get_token_data)):
     # token_data contains decoded data from JWT
     return {
-        "user_id": token_data.get("user_id"),
+        "username": token_data.get("sub"),
         "exp": token_data.get("exp"),
     }
 ```
@@ -476,7 +483,7 @@ class Task(UserMixin, DtMixin, UuidMixin, JsonApiMixin):
 **routes.py**:
 ```python
 from bazis.contrib.users.routes import UserRouteSet
-from bazis.contrib.users.services import get_user_required
+from bazis.contrib.users.service import get_user_required
 from django.apps import apps
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
