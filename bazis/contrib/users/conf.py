@@ -38,7 +38,11 @@ class Settings(BazisSettings):
     BAZIS_JWT_SESSION_ALG: Literal['HS256', 'HS384', 'HS512'] = Field(
         'HS256', title=_('JWT algorithm')
     )
-    BAZIS_JWT_SESSION_LIFETIME: int = Field(86400, title=_('JWT lifetime'), dynamic=True)
+    BAZIS_JWT_SESSION_LIFETIME: int = Field(
+        86400,
+        title=_('JWT lifetime'),
+        json_schema_extra={'dynamic': True},
+    )
 
 
 settings = Settings()
