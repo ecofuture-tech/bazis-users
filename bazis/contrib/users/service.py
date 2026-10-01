@@ -42,7 +42,9 @@ def decode_token(token: str) -> dict:
         token,
         settings.SECRET_KEY,
         algorithms=[settings.BAZIS_JWT_SESSION_ALG],
-        options={'require': ['exp', 'sub']},
+        # iat is informational: checking it would reject tokens issued by a server whose
+        # clock is slightly ahead
+        options={'require': ['exp', 'sub'], 'verify_iat': False},
     )
 
 
