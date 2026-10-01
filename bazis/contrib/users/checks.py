@@ -18,6 +18,7 @@ Django system checks of bazis-users (see `manage.py bazis_doctor`).
 
 from django.contrib.auth import get_user_model
 from django.core.checks import Error, register
+from django.core.exceptions import ImproperlyConfigured
 
 
 @register()
@@ -27,7 +28,12 @@ def check_user_model(app_configs, **kwargs):
     """
     from .models_abstract import UserAbstract
 
-    user_model = get_user_model()
+    try:
+        user_model = get_user_model()
+    except ImproperlyConfigured as err:
+        return [
+            Error(str(err), hint='Set BS_AUTH_USER_MODEL to an installed model.', id='users.E001')
+        ]
     if not issubclass(user_model, UserAbstract):
         return [
             Error(

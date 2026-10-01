@@ -28,16 +28,19 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
 
 2. `BS_INSTALLED_APPS='["users", ...]'`, `BS_AUTH_USER_MODEL=users.User`,
    `BS_AUTH_ANONYMOUS_USER_MODEL=users.models.AnonymousUser`.
-3. Register the user routes: `router.register('users.router')` with a `users/router.py`
-   like `bazis.contrib.users.router` (`router.register('/user', UserRouteSet.as_router())`).
+3. Optionally register the user routes: `router.register('bazis.contrib.users.router')`
+   (`/user/`). With them a user sees and changes only himself, staff create, list and
+   delete users, and only a superuser changes `is_staff`, `is_superuser`, `is_active`.
+   Projects with bazis-permit protect users with a `PermitRouteBase` route instead.
 
 ## Authentication
 
 - `POST BAZIS_OPENAPI_TOKEN_URL` (default `/api/openapi-token/`, OAuth2 password form)
   returns `{"access_token": ..., "token_type": "bearer"}`; Swagger uses it.
-- The token is read from `Authorization: Bearer`, the query parameter or the cookie named
-  `BAZIS_AUTH_COOKIE_NAME`. It is an HMAC JWT signed with `SECRET_KEY` with `sub`
-  (username), `iat` and `exp` (`BAZIS_JWT_SESSION_LIFETIME` seconds). A token without
+- The token is read from `Authorization: Bearer`, or the query parameter or the cookie
+  named `BAZIS_AUTH_COOKIE_NAME` (default `bazis_auth`). It is an HMAC JWT signed with
+  `SECRET_KEY` with `sub` (username), `iat` and `exp` (`BAZIS_JWT_SESSION_LIFETIME`
+  seconds). A token without
   `exp` is anonymous; an expired or invalid token is 401.
 - `user.jwt_build()` builds a token (e.g. after a custom login).
 
@@ -52,6 +55,7 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
 
 ## Rules
 
-- A user can never change his own groups, permissions or staff flags through the API:
-  keep those fields out of the update schemas.
+- A user must never be able to change his own groups, permissions or staff flags: keep
+  those fields out of the update schemas of custom user routes, or check them in
+  `hook_after_update` as `UserRouteSet` does.
 - Check `bazis_doctor` after changing the user model (`users.E001`).
