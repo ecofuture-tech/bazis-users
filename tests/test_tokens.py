@@ -74,8 +74,6 @@ def test_expired_token(sample_app, user):
     [
         # signed with another key
         lambda u: _token({'sub': u.username, 'exp': now() + timedelta(hours=1)}, key='x' * 40),
-        # never expires
-        lambda u: _token({'sub': u.username}),
         # no subject
         lambda u: _token({'exp': now() + timedelta(hours=1)}),
         # unsigned
@@ -87,7 +85,7 @@ def test_expired_token(sample_app, user):
         # not a token at all
         lambda u: 'garbage',
     ],
-    ids=['foreign-key', 'no-exp', 'no-sub', 'alg-none', 'other-alg', 'garbage'],
+    ids=['foreign-key', 'no-sub', 'alg-none', 'other-alg', 'garbage'],
 )
 def test_invalid_token(sample_app, user, make_token):
     response = _get_me(sample_app, make_token(user))
@@ -122,3 +120,16 @@ def test_middleware_resets_user_context(user):
     request.user = AnonymousUser()
     middleware(request)
     assert seen == [user, None]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_token_without_expiration_is_anonymous(sample_app, user):
+    """
+    A token without expiration identifies nobody (it is not a session token, e.g. the
+    authorization store token of bazis-authing in the same cookie).
+    """
+    from bazis.contrib.users.service import get_token_data
+
+    token = _token({'sub': user.username})
+    assert get_token_data(token_header=None, token_param=None, token_cookie=token) == {}
+    assert _get_me(sample_app, token).status_code == 401
