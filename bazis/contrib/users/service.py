@@ -56,9 +56,9 @@ def get_token_data(
     token_cookie: str | None = Cookie(default=None, alias=settings.BAZIS_AUTH_COOKIE_NAME),
 ) -> dict:
     """
-    Decodes the JWT token provided by the client. If the token is missing or
-    invalid, returns an empty dictionary. Raises a JsonApi401Exception if the token
-    has expired.
+    Decodes the JWT token provided by the client. Returns an empty dictionary if there
+    is no token or the token is not a session token (no expiration). Raises
+    JsonApi401Exception if the token has expired or is invalid.
     """
     token = token_param or token_header or token_cookie
 
@@ -68,6 +68,13 @@ def get_token_data(
         return decode_token(token)
     except jwt.ExpiredSignatureError:
         raise JsonApi401Exception(detail=str(_('Token has expired'))) from None
+    except jwt.MissingRequiredClaimError as exc:
+        if exc.claim == 'exp':
+            # a token signed with SECRET_KEY but without expiration is not a session token
+            # (e.g. the token of the authorization store of bazis-authing, which uses the
+            # same cookie): it identifies nobody, the request is anonymous
+            return {}
+        raise JsonApi401Exception(detail=str(_('Token is invalid'))) from None
     except jwt.InvalidTokenError:
         raise JsonApi401Exception(detail=str(_('Token is invalid'))) from None
 
