@@ -29,7 +29,7 @@ from django.dispatch import receiver
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 
-from jose import jwt
+import jwt
 
 from bazis.core.models_abstract import InitialBase, JsonApiMixin
 
@@ -68,9 +68,11 @@ class UserAbstract(AbstractUser, InitialBase):
         Generates a JSON Web Token (JWT) for the user, optionally including an
         authentication type.
         """
+        dt_now = now()
         data = {
             'sub': self.username,
-            'exp': now() + timedelta(seconds=settings.BAZIS_JWT_SESSION_LIFETIME),
+            'iat': dt_now,
+            'exp': dt_now + timedelta(seconds=settings.BAZIS_JWT_SESSION_LIFETIME),
         }
         if auth_type:
             data['auth_type'] = auth_type

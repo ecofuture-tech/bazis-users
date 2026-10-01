@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Literal
+
 from django.utils.translation import gettext_lazy as _
 
 from pydantic import Field
-
-from jose.constants import Algorithms
 
 from bazis.core.utils.schemas import BazisSettings
 
@@ -34,7 +34,10 @@ class Settings(BazisSettings):
     )
     BAZIS_OPENAPI_TOKEN_URL: str = Field('/api/openapi-token/', title=_('OpenAPI token`s endpoint'))
     BAZIS_AUTH_COOKIE_NAME: str = Field('bazis_auth', title=_('Name of the user cookie'))
-    BAZIS_JWT_SESSION_ALG: str = Field(Algorithms.HS256, title=_('JWT algorithm'))
+    #: session tokens are signed with SECRET_KEY, so only HMAC algorithms are allowed
+    BAZIS_JWT_SESSION_ALG: Literal['HS256', 'HS384', 'HS512'] = Field(
+        'HS256', title=_('JWT algorithm')
+    )
     BAZIS_JWT_SESSION_LIFETIME: int = Field(86400, title=_('JWT lifetime'), dynamic=True)
 
 
