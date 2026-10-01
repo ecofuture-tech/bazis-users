@@ -52,6 +52,15 @@ def test_valid_token(sample_app, user):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_token_issued_in_the_future(sample_app, user):
+    # a token issued by a server whose clock is ahead
+    token = _token(
+        {'sub': user.username, 'iat': now() + timedelta(seconds=5), 'exp': now() + timedelta(hours=1)}
+    )
+    assert _get_me(sample_app, token).status_code == 200
+
+
+@pytest.mark.django_db(transaction=True)
 def test_expired_token(sample_app, user):
     token = _token({'sub': user.username, 'exp': now() - timedelta(seconds=1)})
     response = _get_me(sample_app, token)
