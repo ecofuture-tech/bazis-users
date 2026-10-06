@@ -16,6 +16,7 @@
 Django system checks of bazis-users (see `manage.py bazis_doctor`).
 """
 
+from django.conf import global_settings, settings
 from django.contrib.auth import get_user_model
 from django.core.checks import Error, register
 from django.core.exceptions import ImproperlyConfigured
@@ -27,6 +28,21 @@ def check_user_model(app_configs, **kwargs):
     The session tokens and the user routes need the user model of bazis-users.
     """
     from .models_abstract import UserAbstract
+
+    # the check is registered by UsersConfig.ready(), so the users app is installed; the
+    # package does not default AUTH_USER_MODEL, a project that does not set it keeps auth.User
+    if settings.AUTH_USER_MODEL == global_settings.AUTH_USER_MODEL:
+        return [
+            Error(
+                'AUTH_USER_MODEL is not set, so Django uses its default auth.User, '
+                'but the project installs the users app.',
+                hint=(
+                    'Add BS_AUTH_USER_MODEL=users.User to the project environment (use the '
+                    'label of your users app and the name of your user model if they differ).'
+                ),
+                id='users.E001',
+            )
+        ]
 
     try:
         user_model = get_user_model()

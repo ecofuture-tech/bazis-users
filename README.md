@@ -290,6 +290,14 @@ class User(UserAbstract, DtMixin, UuidMixin, JsonApiMixin):
         return self.get_full_name()
 ```
 
+Point Django to the model in the project environment (the package does not default
+`AUTH_USER_MODEL`; without it Django keeps `auth.User` and the system check `users.E001`
+fails at startup):
+
+```bash
+BS_AUTH_USER_MODEL=myapp.User
+```
+
 ### Creating User Route
 
 ```python

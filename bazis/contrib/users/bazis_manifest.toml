@@ -38,7 +38,7 @@ import = "bazis.contrib.users.service.get_user_required"
 use_when = "a FastAPI dependency for the authenticated user in a custom endpoint"
 
 [[pitfalls]]
-text = "the user model must inherit UserAbstract and be set in BS_AUTH_USER_MODEL"
+text = "the user model must inherit UserAbstract and be set in BS_AUTH_USER_MODEL explicitly (the package does not default AUTH_USER_MODEL, Django keeps auth.User)"
 check = "users.E001"
 
 [[pitfalls]]
