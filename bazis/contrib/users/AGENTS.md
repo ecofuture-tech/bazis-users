@@ -27,7 +27,11 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
    ```
 
 2. `BS_INSTALLED_APPS='["users", ...]'`, `BS_AUTH_USER_MODEL=users.User`,
-   `BS_AUTH_ANONYMOUS_USER_MODEL=users.models.AnonymousUser`.
+   `BS_AUTH_ANONYMOUS_USER_MODEL=users.models.AnonymousUser`. The core declares
+   `AUTH_USER_MODEL` (default `auth.User`) and the package does not default it to the users
+   app (its settings are loaded in every project where it is installed, also in projects
+   without the users app): without `BS_AUTH_USER_MODEL` Django keeps `auth.User` and
+   `bazis_doctor` reports `users.E001`. Needs bazis 2.5.0 or newer.
 3. Optionally register the user routes: `router.register('bazis.contrib.users.router')`
    (`/user/`). With them a user sees and changes only himself, staff create, list and
    delete users, and only a superuser changes `is_staff`, `is_superuser`, `is_active`.
@@ -58,4 +62,7 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
 - A user must never be able to change his own groups, permissions or staff flags: keep
   those fields out of the update schemas of custom user routes, or check them in
   `hook_after_update` as `UserRouteSet` does.
+- `BS_AUTH_USER_MODEL` must be set explicitly in every project with the users app
+  (`users.E001` at startup tells so); the label and the name are those of the project's
+  user model.
 - Check `bazis_doctor` after changing the user model (`users.E001`).

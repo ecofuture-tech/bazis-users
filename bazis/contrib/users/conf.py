@@ -24,11 +24,16 @@ from bazis.core.utils.schemas import BazisSettings
 class Settings(BazisSettings):
     """
     Settings class inherits from BazisSettings and defines various configuration
-    parameters for the application, including user models, OpenAPI token endpoint,
-    JWT algorithm, and JWT session lifetime.
+    parameters for the application, including the anonymous user model, OpenAPI token
+    endpoint, JWT algorithm, and JWT session lifetime.
+
+    The package must not declare or default Django settings that bind project models, such
+    as AUTH_USER_MODEL (the core declares it with Django's default, a project sets
+    BS_AUTH_USER_MODEL): the conf module is loaded in every project where the package is
+    installed, including projects that do not use the users app. See the system check
+    users.E001.
     """
 
-    AUTH_USER_MODEL: str = Field('users.User', title=_('Default user model'))
     AUTH_ANONYMOUS_USER_MODEL: str = Field(
         'bazis.contrib.users.models.AnonymousUser', title=_('Default anonymous user model')
     )
