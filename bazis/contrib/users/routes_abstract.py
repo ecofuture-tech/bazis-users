@@ -14,7 +14,9 @@
 
 from fastapi import Depends
 
-from bazis.core.errors import JsonApi403Exception
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
+
+from bazis.core.errors import JsonApi403Exception, SchemaErrors
 from bazis.core.routes_abstract.initial import http_get, inject_make
 from bazis.core.routes_abstract.jsonapi import JsonapiRouteBase
 from bazis.core.utils.functools import get_attr
@@ -28,7 +30,39 @@ User = get_user_model() # noqa: N806
 AnonymousUser = get_anonymous_user_model()
 
 
-class UserRouteBase(JsonapiRouteBase):
+class UserOpenApiMixin:
+    """
+    OpenAPI of the routes that read the token (`get_user_optional`, `get_user_required`):
+    the 401 response, and the security requirement for a client generator: the token is
+    optional unless `auth_required`. FastAPI emits the requirement of the token
+    (`OAuth2PasswordBearer`) for every such route as if it were mandatory; the empty
+    requirement added here makes a route that serves anonymous requests say so.
+    """
+
+    #: the routes fail a request without a valid token (otherwise it is anonymous)
+    auth_required: bool = False
+
+    @classmethod
+    def route_responses(cls, route_ctx):
+        """
+        An invalid or expired token is 401 for every route, a missing one also if
+        `auth_required`.
+        """
+        return {**super().route_responses(route_ctx), HTTP_401_UNAUTHORIZED: {'model': SchemaErrors}}
+
+    @classmethod
+    def route_openapi_extra(cls, route_ctx):
+        """
+        An optional token is declared as `security: [..., {}]` (added to the requirement
+        of FastAPI).
+        """
+        extra = super().route_openapi_extra(route_ctx)
+        if not cls.auth_required:
+            extra['security'] = [{}]
+        return extra
+
+
+class UserRouteBase(UserOpenApiMixin, JsonapiRouteBase):
     """
     Base class for user-related routes, providing common functionality and user
     injection mechanisms.
@@ -52,6 +86,16 @@ class UserRouteBase(JsonapiRouteBase):
         """
         self._set_user(kwargs['inject'].user)
         super().__init__(*args, **kwargs)
+
+    @classmethod
+    def route_responses(cls, route_ctx):
+        """
+        `action_dict_data` is for staff only: 403.
+        """
+        responses = super().route_responses(route_ctx)
+        if route_ctx.name == 'action_dict_data':
+            responses[HTTP_403_FORBIDDEN] = {'model': SchemaErrors}
+        return responses
 
     def _set_user(self, user):
         """
@@ -99,6 +143,7 @@ class UserRequiredRouteBase(UserRouteBase):
     """
 
     abstract: bool = True
+    auth_required: bool = True
 
     @inject_make()
     class InjectUser:
