@@ -33,6 +33,11 @@ import = "bazis.contrib.users.routes_abstract.UserRequiredRouteBase"
 use_when = "a route that requires authentication"
 
 [[extension_points]]
+name = "UserOpenApiMixin"
+import = "bazis.contrib.users.routes_abstract.UserOpenApiMixin"
+use_when = "a route class that injects get_user_required itself and still has to document the token (security) and the 401 in OpenAPI: auth_required = True"
+
+[[extension_points]]
 name = "get_user_required"
 import = "bazis.contrib.users.service.get_user_required"
 use_when = "a FastAPI dependency for the authenticated user in a custom endpoint"

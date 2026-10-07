@@ -47,6 +47,14 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
   seconds). A token without
   `exp` is anonymous; an expired or invalid token is 401.
 - `user.jwt_build()` builds a token (e.g. after a custom login).
+- The OpenAPI schema declares the scheme `OAuth2PasswordBearer` (FastAPI, with the token
+  URL) and the `security` of every operation that reads the token: `[{OAuth2PasswordBearer}]`
+  where the token is required (`UserRequiredRouteBase`, `UserRouteSet`) and
+  `[{OAuth2PasswordBearer}, {}]` where an anonymous request is served (`UserRouteBase`, so
+  also the routes of bazis-permit); both document the 401 error (`SchemaErrors`), and the 403 where the routes answer it
+  (`action_dict_data`, create/update/delete of `UserRouteSet`). A route
+  class of your own that injects `get_user_required` directly sets `auth_required = True`
+  and inherits `UserOpenApiMixin` to document the same; other classes need nothing.
 
 ## Routes
 
