@@ -48,3 +48,7 @@ check = "users.E001"
 
 [[pitfalls]]
 text = "groups, permissions and is_staff must not be writable by the user himself"
+
+[[pitfalls]]
+text = "the token endpoint (POST BAZIS_OPENAPI_TOKEN_URL) is a route of the application declared by importing bazis.contrib.users.token: import it in the router module of the project (registering bazis.contrib.users.router imports it too), otherwise nobody can log in"
+check = "users.E002"

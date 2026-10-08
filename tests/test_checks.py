@@ -14,7 +14,7 @@
 
 import pytest
 
-from bazis.contrib.users.checks import check_user_model
+from bazis.contrib.users.checks import check_token_route, check_user_model
 
 
 def test_default_user_model_with_users_app(settings):
@@ -39,3 +39,46 @@ def test_unresolvable_user_model(settings, model):
     settings.AUTH_USER_MODEL = model
 
     assert [it.id for it in check_user_model(None)] == ['users.E001']
+
+
+def test_token_route_of_the_application(sample_app):
+    """
+    The router of the sample registers `bazis.contrib.users.router`, which declares the
+    token endpoint.
+    """
+    assert check_token_route(None) == []
+
+
+def test_token_route_missing(monkeypatch):
+    """
+    A project that routes the users itself and does not import the token endpoint has no
+    login: the check names the import.
+    """
+    from fastapi import FastAPI
+
+    monkeypatch.setattr('bazis.core.introspect.loaded_app', lambda: FastAPI())
+
+    errors = check_token_route(None)
+
+    assert [it.id for it in errors] == ['users.E002']
+    assert 'import bazis.contrib.users.token' in errors[0].hint
+
+
+def test_token_route_is_not_checked_without_the_application(monkeypatch):
+    monkeypatch.setattr('bazis.core.introspect.loaded_app', lambda: None)
+
+    assert check_token_route(None) == []
+
+
+def test_token_module_declares_the_endpoint(sample_app):
+    from django.conf import settings
+
+    from bazis.contrib.users import token
+    from bazis.core.introspect import iter_routes_with_paths
+
+    routes = {
+        path: route.endpoint
+        for path, route in iter_routes_with_paths(sample_app.routes)
+        if 'POST' in route.methods
+    }
+    assert routes[settings.BAZIS_OPENAPI_TOKEN_URL] is token.token_auth

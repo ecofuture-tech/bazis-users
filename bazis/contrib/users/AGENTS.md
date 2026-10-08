@@ -32,15 +32,30 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
    app (its settings are loaded in every project where it is installed, also in projects
    without the users app): without `BS_AUTH_USER_MODEL` Django keeps `auth.User` and
    `bazis_doctor` reports `users.E001`. Needs bazis 2.5.0 or newer.
-3. Optionally register the user routes: `router.register('bazis.contrib.users.router')`
+3. Register the login, the token endpoint (below), in the router module of the project
+   (`BS_BAZIS_ROUTER_MODULE`). It is a route of the application with an absolute path, not
+   of the API router, so it is declared by importing its module:
+
+   ```python
+   import bazis.contrib.users.token  # noqa: F401  POST BAZIS_OPENAPI_TOKEN_URL
+   from bazis.core.routing import BazisRouter
+
+   router = BazisRouter(prefix='/api/v1')
+   ```
+
+   Registering the user routes (step 4) imports it too. Without it nobody can log in;
+   `bazis_doctor` reports `users.E002`.
+4. Optionally register the user routes: `router.register('bazis.contrib.users.router')`
    (`/user/`). With them a user sees and changes only himself, staff create, list and
    delete users, and only a superuser changes `is_staff`, `is_superuser`, `is_active`.
-   Projects with bazis-permit protect users with a `PermitRouteBase` route instead.
+   Projects with bazis-permit protect users with a `PermitRouteBase` route instead (keep
+   the import of step 3).
 
 ## Authentication
 
-- `POST BAZIS_OPENAPI_TOKEN_URL` (default `/api/openapi-token/`, OAuth2 password form)
-  returns `{"access_token": ..., "token_type": "bearer"}`; Swagger uses it.
+- `POST BAZIS_OPENAPI_TOKEN_URL` (default `/api/openapi-token/`, OAuth2 password form,
+  declared by `bazis.contrib.users.token`, see Setup) returns
+  `{"access_token": ..., "token_type": "bearer"}`; Swagger uses it.
 - The token is read from `Authorization: Bearer`, or the query parameter or the cookie
   named `BAZIS_AUTH_COOKIE_NAME` (default `bazis_auth`). It is an HMAC JWT signed with
   `SECRET_KEY` with `sub` (username), `iat` and `exp` (`BAZIS_JWT_SESSION_LIFETIME`
@@ -73,4 +88,5 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
 - `BS_AUTH_USER_MODEL` must be set explicitly in every project with the users app
   (`users.E001` at startup tells so); the label and the name are those of the project's
   user model.
-- Check `bazis_doctor` after changing the user model (`users.E001`).
+- Check `bazis_doctor` after changing the user model (`users.E001`) and the router of the
+  project (`users.E002`, the token endpoint).

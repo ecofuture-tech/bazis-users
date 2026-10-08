@@ -62,3 +62,37 @@ def check_user_model(app_configs, **kwargs):
             )
         ]
     return []
+
+
+@register()
+def check_token_route(app_configs, **kwargs):
+    """
+    The token endpoint is a route of the application declared by importing
+    `bazis.contrib.users.token`: a project whose router imports neither it nor
+    `bazis.contrib.users.router` has no login, and every route that reads the token points
+    Swagger and the clients at a missing URL. Runs when the application is loaded
+    (`manage.py bazis_doctor`).
+    """
+    from bazis.core.introspect import iter_routes_with_paths, loaded_app
+
+    if (app := loaded_app()) is None:
+        return []
+
+    url = settings.BAZIS_OPENAPI_TOKEN_URL
+    if any(
+        path == url and 'POST' in (route.methods or ())
+        for path, route in iter_routes_with_paths(app.routes)
+    ):
+        return []
+    return [
+        Error(
+            f'The token endpoint POST {url} (BAZIS_OPENAPI_TOKEN_URL) is not registered, '
+            'so nobody can log in.',
+            hint=(
+                'Import it in the router module of the project (BS_BAZIS_ROUTER_MODULE): '
+                '`import bazis.contrib.users.token  # noqa: F401`, or register the user '
+                "routes with `router.register('bazis.contrib.users.router')`."
+            ),
+            id='users.E002',
+        )
+    ]
