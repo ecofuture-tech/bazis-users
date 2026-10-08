@@ -82,15 +82,24 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
 
 ## The language of a user
 
-- `UserAbstract.language` is the language the user has chosen: a code of `LANGUAGES`, blank
-  when he has chosen none. Its choices are a callable (`language_choices`), so a change of
-  `LANGUAGES` needs no migration; the field itself needs one in the project (bazis-users
-  2.7.0: run `makemigrations` for the user model).
+- `UserLanguageMixin` (`bazis.contrib.users.models_abstract`) adds `language`: the language
+  the user has chosen, a code of `LANGUAGES`, None when he has chosen none. It is opt-in:
+  `UserAbstract` has no such field. To use it, add the mixin to the user model of the
+  project and run `makemigrations`:
+
+  ```python
+  class User(JsonApiMixin, UuidMixin, UserLanguageMixin, UserAbstract):
+      pass
+  ```
+
+  The user model of the package (`bazis.contrib.users.models.User`) has it. Its choices are
+  a callable (`language_choices`), so a change of `LANGUAGES` needs no migration.
 - The user reads and changes it himself: the attribute `language` of the user routes
   (`PATCH /user/{id}/`); a project that routes the users with bazis-permit grants the field.
-  bazis-front adopts it at a login and saves the language of its interface there.
-- The schemas list the languages (`enum`), but the core does not reject another value on a
-  write: send a code of `LANGUAGES`.
+  Saving stores the code of `LANGUAGES` (`ru` of `ru-RU`, `RU`; blank is None); another
+  language is a 422 with the pointer `/data/attributes/language`, whatever route saves it.
+- bazis-front detects the field (`profile_language` of its contract), adopts it at a login
+  and saves the language of its interface there.
 - The language of a request is still `?lang` or `Accept-Language` (the `LanguageMiddleware`
   of the core), not the profile. Work done for a user outside his requests (e-mails,
   background tasks) uses `translation.override(user.language or settings.LANGUAGE_CODE)`.

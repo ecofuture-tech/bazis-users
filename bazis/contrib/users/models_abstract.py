@@ -31,15 +31,8 @@ from django.utils.translation import gettext_lazy as _
 
 import jwt
 
+from bazis.core.errors import JsonApiBazisError, JsonApiBazisException
 from bazis.core.models_abstract import InitialBase, JsonApiMixin
-
-
-def language_choices() -> list[tuple[str, str]]:
-    """
-    The choices of `UserAbstract.language`: the languages of the project (LANGUAGES). A
-    callable, so that the migrations do not depend on the languages of the project.
-    """
-    return settings.LANGUAGES
 
 
 class UserAbstract(AbstractUser, InitialBase):
@@ -48,11 +41,6 @@ class UserAbstract(AbstractUser, InitialBase):
     InitialBase.
     """
     dt_first_login = models.DateTimeField('Date/time of first login', blank=True, null=True)
-    #: the language the user has chosen (blank: none), one of LANGUAGES; a client adopts it
-    #: at a login and saves the language of its interface here
-    language = models.CharField(
-        _('Language'), max_length=15, blank=True, default='', choices=language_choices
-    )
 
     class Meta:
         """
@@ -130,6 +118,64 @@ class UserAbstract(AbstractUser, InitialBase):
 def set_dt_first_login(sender, user=None, **kwargs):
     if user and not user.dt_first_login and user.pk:
         type(user).objects.filter(pk=user.pk).update(dt_first_login=now())
+
+
+def language_choices() -> list[tuple[str, str]]:
+    """
+    The choices of `UserLanguageMixin.language`: the languages of the project (LANGUAGES).
+    A callable, so that the migrations do not depend on the languages of the project.
+    """
+    return settings.LANGUAGES
+
+
+def language_code(value: str | None) -> str | None:
+    """
+    The code of LANGUAGES of a language code (the same code or its base code, `ru` of
+    `ru-RU`, case-insensitively); None for None or a blank value. Raises ValueError for a
+    language the project does not have.
+    """
+    if value is None or not value.strip():
+        return None
+    languages = {code.lower(): code for code, _name in settings.LANGUAGES}
+    value = value.strip().lower().replace('_', '-')
+    if code := languages.get(value) or languages.get(value.split('-')[0]):
+        return code
+    raise ValueError(value)
+
+
+class UserLanguageMixin(InitialBase):
+    """
+    The language the user has chosen (`language`): a code of LANGUAGES, None when he has
+    chosen none. Opt-in: add it to the user model of the project (and run makemigrations);
+    the user model of the package has it. A client (bazis-front) adopts it at a login and
+    saves the language of its interface there.
+    """
+
+    language = models.CharField(
+        _('Language'), max_length=15, null=True, blank=True, default=None, choices=language_choices
+    )
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        """
+        Stores the code of LANGUAGES of the language; another language is a validation
+        error of the attribute `language` (422), whatever route writes it (the core does
+        not validate the choices).
+        """
+        try:
+            self.language = language_code(self.language)
+        except ValueError:
+            raise JsonApiBazisException(
+                JsonApiBazisError(
+                    str(_('The language must be one of: %s'))
+                    % ', '.join(code for code, _name in settings.LANGUAGES),
+                    loc=('data', 'attributes', 'language'),
+                ),
+                status=422,
+            ) from None
+        super().save(*args, **kwargs)
 
 
 class AnonymousUserAbstract(BaseAnonymousUser):
