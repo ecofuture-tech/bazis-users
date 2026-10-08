@@ -24,11 +24,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+from django.conf import settings
+
+from fastapi.testclient import TestClient
+
 import pytest
 from bazis_test_utils.utils import get_api_client
 
 from bazis.contrib.users import get_user_model
 from bazis.contrib.users.models_abstract import UserAbstract
+from bazis.core.errors import JsonApiBazisException
 
 
 User = get_user_model()
@@ -82,6 +87,58 @@ def test_a_language_the_project_does_not_have(sample_app, user):
     assert 'en, ru' in error['detail']
     user.refresh_from_db()
     assert user.language is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_stale_language_does_not_block_the_user(sample_app, user):
+    """
+    A language the project no longer has (removed from LANGUAGES) stays until the language
+    is written: the user logs in, and every save that does not change the language passes.
+    """
+    User.objects.filter(pk=user.pk).update(language='de')
+
+    response = TestClient(sample_app).post(
+        settings.BAZIS_OPENAPI_TOKEN_URL, data={'username': 'user', 'password': 'weak_password_1'}
+    )
+    assert response.status_code == 200, response.text
+
+    user = User.objects.get(pk=user.pk)
+    user.save(update_fields=['last_login'])
+    user.first_name = 'Me'
+    user.set_password('weak_password_2')
+    user.save()
+    deferred = User.objects.defer('language').get(pk=user.pk)
+    deferred.last_name = 'Myself'
+    deferred.save()
+    # a change of another field through the routes
+    client = get_api_client(sample_app, user.jwt_build())
+    response = client.patch(f'/api/v1/users/user/{user.id}/', json_data=_patch(user, first_name='I'))
+    assert response.status_code == 200, response.text
+    # reloaded after another change of the language in the database
+    user.language = 'ru'
+    user.save()
+    User.objects.filter(pk=user.pk).update(language='de')
+    user.refresh_from_db()
+    user.save()
+
+    assert User.objects.get(pk=user.pk).language == 'de'
+
+    # writing it validates it
+    user.language = 'fr'
+    with pytest.raises(JsonApiBazisException):
+        user.save(update_fields=['language'])
+    deferred.language = 'fr'
+    with pytest.raises(JsonApiBazisException):
+        deferred.save()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_new_user_with_a_language_the_project_does_not_have():
+    with pytest.raises(JsonApiBazisException):
+        User.objects.create_user('user', password='weak_password_1', language='de')
+    assert not User.objects.filter(username='user').exists()
+
+    assert User.objects.create_user('other', language='RU').language == 'ru'
 
 
 @pytest.mark.django_db(transaction=True)

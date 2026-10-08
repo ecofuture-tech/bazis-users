@@ -98,6 +98,9 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
   (`PATCH /user/{id}/`); a project that routes the users with bazis-permit grants the field.
   Saving stores the code of `LANGUAGES` (`ru` of `ru-RU`, `RU`; blank is None); another
   language is a 422 with the pointer `/data/attributes/language`, whatever route saves it.
+  Only a language being written is checked: a stored language the project no longer has
+  (removed from `LANGUAGES`) stays until it is changed, and the login and the other saves
+  pass.
 - bazis-front detects the field (`profile_language` of its contract), adopts it at a login
   and saves the language of its interface there.
 - The language of a request is still `?lang` or `Accept-Language` (the `LanguageMiddleware`

@@ -62,11 +62,11 @@ msgstr ""
 msgid "Token is invalid"
 msgstr ""
 
-#: models_abstract.py:155
+#: models_abstract.py:159
 msgid "Language"
 msgstr ""
 
-#: models_abstract.py:172
+#: models_abstract.py:198
 #, python-format
 msgid "The language must be one of: %s"
 msgstr ""

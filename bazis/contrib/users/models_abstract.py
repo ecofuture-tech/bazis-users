@@ -143,6 +143,10 @@ def language_code(value: str | None) -> str | None:
     raise ValueError(value)
 
 
+#: the language of a user loaded without it (deferred)
+_NOT_LOADED = object()
+
+
 class UserLanguageMixin(InitialBase):
     """
     The language the user has chosen (`language`): a code of LANGUAGES, None when he has
@@ -155,27 +159,51 @@ class UserLanguageMixin(InitialBase):
         _('Language'), max_length=15, null=True, blank=True, default=None, choices=language_choices
     )
 
+    #: the language stored in the database, as loaded (`_NOT_LOADED` when it was deferred);
+    #: None for a new user
+    _language_stored = None
+
     class Meta:
         abstract = True
 
+    @classmethod
+    def from_db(cls, db, field_names, values, **kwargs):
+        instance = super().from_db(db, field_names, values, **kwargs)
+        instance._language_stored = instance.__dict__.get('language', _NOT_LOADED)
+        return instance
+
+    def refresh_from_db(self, using=None, fields=None, **kwargs):
+        super().refresh_from_db(using, fields, **kwargs)
+        if (fields is None or 'language' in fields) and 'language' in self.__dict__:
+            self._language_stored = self.__dict__['language']
+
     def save(self, *args, **kwargs):
         """
-        Stores the code of LANGUAGES of the language; another language is a validation
-        error of the attribute `language` (422), whatever route writes it (the core does
-        not validate the choices).
+        A language written (changed and saved) is stored as the code of LANGUAGES; another
+        language is a validation error of the attribute `language` (422), whatever route
+        writes it (the core does not validate the choices). A stored language the project
+        no longer has stays until it is changed: the other saves (the login, a new
+        password) do not check it.
         """
-        try:
-            self.language = language_code(self.language)
-        except ValueError:
-            raise JsonApiBazisException(
-                JsonApiBazisError(
-                    str(_('The language must be one of: %s'))
-                    % ', '.join(code for code, _name in settings.LANGUAGES),
-                    loc=('data', 'attributes', 'language'),
-                ),
-                status=422,
-            ) from None
+        update_fields = kwargs.get('update_fields')
+        written = 'language' in self.__dict__ and (
+            update_fields is None or 'language' in update_fields
+        )
+        if written and self.language != self._language_stored:
+            try:
+                self.language = language_code(self.language)
+            except ValueError:
+                raise JsonApiBazisException(
+                    JsonApiBazisError(
+                        str(_('The language must be one of: %s'))
+                        % ', '.join(code for code, _name in settings.LANGUAGES),
+                        loc=('data', 'attributes', 'language'),
+                    ),
+                    status=422,
+                ) from None
         super().save(*args, **kwargs)
+        if written:
+            self._language_stored = self.language
 
 
 class AnonymousUserAbstract(BaseAnonymousUser):
