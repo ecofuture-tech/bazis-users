@@ -34,12 +34,25 @@ import jwt
 from bazis.core.models_abstract import InitialBase, JsonApiMixin
 
 
+def language_choices() -> list[tuple[str, str]]:
+    """
+    The choices of `UserAbstract.language`: the languages of the project (LANGUAGES). A
+    callable, so that the migrations do not depend on the languages of the project.
+    """
+    return settings.LANGUAGES
+
+
 class UserAbstract(AbstractUser, InitialBase):
     """
     Abstract base class for user models, extending Django's AbstractUser and
     InitialBase.
     """
     dt_first_login = models.DateTimeField('Date/time of first login', blank=True, null=True)
+    #: the language the user has chosen (blank: none), one of LANGUAGES; a client adopts it
+    #: at a login and saves the language of its interface here
+    language = models.CharField(
+        _('Language'), max_length=15, blank=True, default='', choices=language_choices
+    )
 
     class Meta:
         """

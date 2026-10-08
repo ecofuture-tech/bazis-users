@@ -52,3 +52,6 @@ text = "groups, permissions and is_staff must not be writable by the user himsel
 [[pitfalls]]
 text = "the token endpoint (POST BAZIS_OPENAPI_TOKEN_URL) is a route of the application declared by importing bazis.contrib.users.token: import it in the router module of the project (registering bazis.contrib.users.router imports it too), otherwise nobody can log in"
 check = "users.E002"
+
+[[pitfalls]]
+text = "UserAbstract has the field language (bazis-users 2.7.0, the language the user has chosen, a code of LANGUAGES or blank): the user model of a project needs a migration; a change of LANGUAGES does not"

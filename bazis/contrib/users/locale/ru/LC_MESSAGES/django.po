@@ -79,3 +79,7 @@ msgstr "Срок действия токена истек"
 #: service.py:61
 msgid "Token is invalid"
 msgstr "Токен недействителен"
+
+#: models_abstract.py:54
+msgid "Language"
+msgstr "Язык"

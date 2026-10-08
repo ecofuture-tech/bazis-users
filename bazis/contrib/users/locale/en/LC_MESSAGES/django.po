@@ -61,3 +61,7 @@ msgstr ""
 #: service.py:54
 msgid "Token is invalid"
 msgstr ""
+
+#: models_abstract.py:54
+msgid "Language"
+msgstr ""
