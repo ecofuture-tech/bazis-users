@@ -18,6 +18,11 @@ import = "bazis.contrib.users.models_abstract.UserAbstract"
 use_when = "the user model of the project (with JsonApiMixin, UuidMixin)"
 
 [[extension_points]]
+name = "UserLanguageMixin"
+import = "bazis.contrib.users.models_abstract.UserLanguageMixin"
+use_when = "the users choose their language (language: a code of LANGUAGES or None), e.g. kept by bazis-front"
+
+[[extension_points]]
 name = "UsersConfig"
 import = "bazis.contrib.users.apps.UsersConfig"
 use_when = "the AppConfig of the project app that holds the user model"
@@ -52,3 +57,6 @@ text = "groups, permissions and is_staff must not be writable by the user himsel
 [[pitfalls]]
 text = "the token endpoint (POST BAZIS_OPENAPI_TOKEN_URL) is a route of the application declared by importing bazis.contrib.users.token: import it in the router module of the project (registering bazis.contrib.users.router imports it too), otherwise nobody can log in"
 check = "users.E002"
+
+[[pitfalls]]
+text = "the language of a user is opt-in: UserAbstract has no field language; add UserLanguageMixin to the user model and run makemigrations (a change of LANGUAGES needs no migration)"

@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from bazis.contrib.users.models_abstract import AnonymousUserAbstract, UserAbstract
+from bazis.contrib.users.models_abstract import (
+    AnonymousUserAbstract,
+    UserAbstract,
+    UserLanguageMixin,
+)
 from bazis.core.models_abstract import JsonApiMixin, UuidMixin
 
 
-class User(JsonApiMixin, UuidMixin, UserAbstract):
+class User(JsonApiMixin, UuidMixin, UserLanguageMixin, UserAbstract):
     """
     Represents a user in the system, combining JSON API support, UUID functionality,
     and user-specific attributes and methods.

@@ -80,6 +80,33 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
 - FastAPI dependencies in `bazis.contrib.users.service`: `get_user_optional`,
   `get_user_required`, `get_token_data`.
 
+## The language of a user
+
+- `UserLanguageMixin` (`bazis.contrib.users.models_abstract`) adds `language`: the language
+  the user has chosen, a code of `LANGUAGES`, None when he has chosen none. It is opt-in:
+  `UserAbstract` has no such field. To use it, add the mixin to the user model of the
+  project and run `makemigrations`:
+
+  ```python
+  class User(JsonApiMixin, UuidMixin, UserLanguageMixin, UserAbstract):
+      pass
+  ```
+
+  The user model of the package (`bazis.contrib.users.models.User`) has it. Its choices are
+  a callable (`language_choices`), so a change of `LANGUAGES` needs no migration.
+- The user reads and changes it himself: the attribute `language` of the user routes
+  (`PATCH /user/{id}/`); a project that routes the users with bazis-permit grants the field.
+  Saving stores the code of `LANGUAGES` (`ru` of `ru-RU`, `RU`; blank is None); another
+  language is a 422 with the pointer `/data/attributes/language`, whatever route saves it.
+  Only a language being written is checked: a stored language the project no longer has
+  (removed from `LANGUAGES`) stays until it is changed, and the login and the other saves
+  pass.
+- bazis-front detects the field (`profile_language` of its contract), adopts it at a login
+  and saves the language of its interface there.
+- The language of a request is still `?lang` or `Accept-Language` (the `LanguageMiddleware`
+  of the core), not the profile. Work done for a user outside his requests (e-mails,
+  background tasks) uses `translation.override(user.language or settings.LANGUAGE_CODE)`.
+
 ## Rules
 
 - A user must never be able to change his own groups, permissions or staff flags: keep
