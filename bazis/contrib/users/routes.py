@@ -12,17 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from django.conf import settings
-from django.contrib.auth import authenticate, get_user_model
-from django.contrib.auth.signals import user_logged_in
+from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
-from fastapi import Depends, HTTPException, Request
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import Depends
 
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
+from starlette.status import HTTP_403_FORBIDDEN
 
-from bazis.core.app import app
 from bazis.core.errors import JsonApi403Exception, SchemaErrors
 from bazis.core.routes_abstract.initial import inject_make
 from bazis.core.routes_abstract.jsonapi import JsonapiRouteBase
@@ -30,31 +26,14 @@ from bazis.core.schemas import CrudApiAction, SchemaFields, SchemaInclusion, Sch
 from bazis.core.schemas.enums import RouteKind
 
 from .routes_abstract import UserOpenApiMixin
-from .schemas import TokenResponse
 from .service import get_user_required
+
+# the token endpoint is declared on the application with the user routes, as before (and
+# `token_auth` keeps its import path)
+from .token import token_auth  # noqa: F401
 
 
 User = get_user_model() # noqa: N806
-
-
-@app.post(
-    settings.BAZIS_OPENAPI_TOKEN_URL,
-    response_model=TokenResponse,
-    responses={HTTP_401_UNAUTHORIZED: {'model': SchemaErrors}},
-)
-def token_auth(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
-    """
-    Handles user authentication by verifying credentials and generating a JWT token.
-    If authentication fails, raises an HTTP 401 Unauthorized exception.
-    """
-    if not (user := authenticate(username=form_data.username, password=form_data.password)):
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail=_('Credentials are invalid'),
-            headers={'WWW-Authenticate': 'Bearer'},
-        )
-    user_logged_in.send(sender=user.__class__, request=request, user=user)
-    return {'access_token': user.jwt_build(auth_type='password'), 'token_type': 'bearer'}
 
 
 class UserRouteSet(UserOpenApiMixin, JsonapiRouteBase):
