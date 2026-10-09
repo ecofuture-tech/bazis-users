@@ -14,10 +14,10 @@
 
 from fastapi import Depends
 
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
+from starlette.status import HTTP_401_UNAUTHORIZED
 
-from bazis.core.errors import JsonApi403Exception, SchemaErrors
-from bazis.core.routes_abstract.initial import http_get, inject_make
+from bazis.core.errors import SchemaErrors
+from bazis.core.routes_abstract.initial import inject_make
 from bazis.core.routes_abstract.jsonapi import JsonapiRouteBase
 from bazis.core.utils.functools import get_attr
 
@@ -87,16 +87,6 @@ class UserRouteBase(UserOpenApiMixin, JsonapiRouteBase):
         self._set_user(kwargs['inject'].user)
         super().__init__(*args, **kwargs)
 
-    @classmethod
-    def route_responses(cls, route_ctx):
-        """
-        `action_dict_data` is for staff only: 403.
-        """
-        responses = super().route_responses(route_ctx)
-        if route_ctx.name == 'action_dict_data':
-            responses[HTTP_403_FORBIDDEN] = {'model': SchemaErrors}
-        return responses
-
     def _set_user(self, user):
         """
         Sets the user context for the current request if the user is authenticated (not
@@ -123,17 +113,6 @@ class UserRouteBase(UserOpenApiMixin, JsonapiRouteBase):
         return super().get_fiter_context(route=route) | {
             '_user': get_attr(user, 'id'),
         }
-
-    @http_get(
-        '/{item_id}/dict_data/',
-    )
-    def action_dict_data(self, item_id: str, **kwargs):
-        """
-        Handles the HTTP GET request to retrieve the dictionary representation of an item.
-        """
-        if self.inject.user is None or not self.inject.user.is_staff:
-            raise JsonApi403Exception()
-        return self.set_item(item_id).dict_data
 
 
 class UserRequiredRouteBase(UserRouteBase):
