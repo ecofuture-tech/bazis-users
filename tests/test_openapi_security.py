@@ -128,14 +128,17 @@ def refs_of(operation, status):
     }
 
 
-def test_forbidden_of_dict_data(operations):
-    """`action_dict_data` of UserRouteBase is for staff only: the only 403 of these routes."""
+def test_no_dict_data_route(operations):
+    """
+    UserRouteBase has no `/{item_id}/dict_data/` (all the attributes of an item, past the
+    schema of the route) and no 403 of its own.
+    """
+    assert not [path for path, _ in operations if path.endswith('/dict_data/')]
     for prefix in (f'{ENTITY}/parent_entity', f'{ENTITY}/extended_entity'):
         for (path, method), operation in route_operations(operations, prefix).items():
-            expected = {SCHEMA_ERRORS} if path.endswith('/dict_data/') else None
             if operation['x-bazis']['kind'] == 'relationship':
                 continue  # the 403 of the core, see its tests
-            assert refs_of(operation, '403') == expected, (method, path)
+            assert refs_of(operation, '403') is None, (method, path)
 
 
 def test_forbidden_of_user_routes(operations):
@@ -150,14 +153,25 @@ def test_forbidden_of_user_routes(operations):
 def test_documented_forbidden_is_what_the_routes_return(sample_app):
     user = get_user_model().objects.create_user('plain_user', password='weak_password_4')
     client = get_api_client(sample_app, user.jwt_build(auth_type='password'))
-    item_id = '00000000-0000-0000-0000-000000000001'
-
-    dict_data = client.get(f'{ENTITY}/parent_entity/{item_id}/dict_data/')
-    assert dict_data.status_code == 403
-    assert SchemaErrors.model_validate(dict_data.json()).errors[0].status == 403
 
     delete = client.client.delete(f'/api/v1/users/user/{user.pk}/', headers=client.headers)
     assert delete.status_code == 403
+
+
+@pytest.mark.django_db(transaction=True)
+def test_dict_data_is_not_a_route(sample_app):
+    """
+    `GET /{item_id}/dict_data/` of a UserRouteBase route answered staff all the attributes of
+    the item, past the schema of the route: it is not a route any more.
+    """
+    from entity.models import ParentEntity
+
+    staff = get_user_model().objects.create_user('staff', password='weak_password_5', is_staff=True)
+    client = get_api_client(sample_app, staff.jwt_build(auth_type='password'))
+    item = ParentEntity.objects.create(name='Parent')
+
+    assert client.get(f'{ENTITY}/parent_entity/{item.pk}/').status_code == 200
+    assert client.get(f'{ENTITY}/parent_entity/{item.pk}/dict_data/').status_code == 404
 
 
 class ProbeBase(UserOpenApiMixin, InitialRouteBase):
