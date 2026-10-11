@@ -65,10 +65,18 @@ it does not see the dependency of the package on the user model.
 
 Put the foreign key in a migration of its own, after the first ones:
 
-1. Comment the field out and run `makemigrations` (the users app, that app and the others):
-   the first migration of the users app no longer depends on that app.
-2. Restore the field and run `makemigrations users`: `000N_user_department` adds it and
-   depends on `('org', '0001_initial')`.
+1. Comment the field out (only the field: leave `autogen_selectors_fields` and the
+   permissions that name it as they are) and run
+   `python manage.py makemigrations --skip-checks --noinput` (the users app, that app and
+   the others): the first migration of the users app no longer depends on that app.
+   `--skip-checks`: without the field the system checks fail (bazis-permit: `permit.E005`
+   for a permission that names it as a selector, `users.user.item.view.department`) and
+   stop `makemigrations`.
+2. Restore the field and run `python manage.py makemigrations users --noinput`:
+   `000N_user_...` adds it (with its selector array of bazis-permit) and depends on the
+   last migration of that app. `--noinput` answers no to any question of a rename (a
+   rename question means that more than the field changed between the two runs: there is
+   none here), so no terminal is needed.
 
 `makemigrations --check` is then clean and `migrate` applies the field last. If the
 migrations exist already, remove the field and the dependency on the app from the first
