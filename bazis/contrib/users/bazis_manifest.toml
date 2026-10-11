@@ -28,6 +28,11 @@ import = "bazis.contrib.users.apps.UsersConfig"
 use_when = "the AppConfig of the project app that holds the user model"
 
 [[extension_points]]
+name = "UserAdminAbstract"
+import = "bazis.contrib.users.admin_abstract.UserAdminAbstract"
+use_when = "the admin of the user model, before the UserAdmin of Django (Setup)"
+
+[[extension_points]]
 name = "UserRouteBase"
 import = "bazis.contrib.users.routes_abstract.UserRouteBase"
 use_when = "a route that needs the current user (self.inject.user)"

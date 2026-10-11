@@ -4,6 +4,20 @@ Users and authentication by session JWT for Bazis: the user model, the token end
 and the route base classes that know the current user. Use it whenever an API has users;
 bazis-permit (permissions) and bazis-authing (login flows) build on it.
 
+### The sections
+
+Read a section with `package_guide("bazis-users", "<section>")` when the step at hand
+needs it; `guide_search` finds the part of a section that answers a question. Every
+project with users needs Setup and Rules.
+
+| Section | Read it when |
+|---|---|
+| Setup | you add the user model, the settings, the token endpoint, the user routes and the admin; the fields of a user (`get_full_name`); a foreign key of the user to a model of the project (a migration cycle) |
+| Authentication | a client logs in: the token endpoint, where the token is read, the JWT, `jwt_build`, the OpenAPI security |
+| Routes | a route needs the current user: `UserRouteBase`, `UserRequiredRouteBase`, the FastAPI dependencies |
+| The language of a user | the users choose their language: `UserLanguageMixin`, its route, bazis-front, the work done outside the requests |
+| Rules | before you write the code, once: the fields a user must never change himself, the checks `users.E001`, `users.E002` |
+
 ## Setup
 
 1. A project app with the user model (the package does not create the table itself):
@@ -50,6 +64,29 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
    delete users, and only a superuser changes `is_staff`, `is_superuser`, `is_active`.
    Projects with bazis-permit protect users with a `PermitRouteBase` route instead (keep
    the import of step 3).
+5. The admin of the users: `UserAdminAbstract` (`bazis.contrib.users.admin_abstract`)
+   before the `UserAdmin` of Django; with bazis-permit, `UserPermitAdminMixin`
+   (`bazis.contrib.permit.admin_abstract`: the roles) first:
+
+   ```python
+   # users/admin.py
+   from django.contrib import admin
+   from django.contrib.auth import get_user_model
+   from django.contrib.auth.admin import UserAdmin
+   from bazis.contrib.permit.admin_abstract import UserPermitAdminMixin  # with bazis-permit
+   from bazis.contrib.users.admin_abstract import UserAdminAbstract
+
+   @admin.register(get_user_model())
+   class UserAdmin(UserPermitAdminMixin, UserAdminAbstract, UserAdmin):
+       pass
+   ```
+
+### The fields of a user
+
+`UserAbstract` is the `AbstractUser` of Django (`username`, `first_name`, `last_name`,
+`email`, `is_active`, `is_staff`, `is_superuser`, `date_joined`, `last_login`, the groups
+and permissions of Django) with `dt_first_login`. The name to show: `get_full_name()`, the
+first and the last name, else the username.
 
 ### A foreign key of the user to a model of the project
 
