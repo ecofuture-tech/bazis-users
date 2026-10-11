@@ -66,11 +66,29 @@ project with users needs Setup and Rules.
    of `UserRouteSet`, bazis-users 2.9): a relationship of a user who is not staff links
    only himself (another user is 403 `ERR_RELATION_ACCESS`), `included` and the filters
    through a relation reach only him. A project whose users pick other users (assignees,
-   watchers) subclasses `UserRouteSet` with `default_route = True` and overrides
-   `restrict_queryset` (`cls, qs, access_action, user=None, **kwargs`; never raise, `user`
-   may be None or anonymous): the user routes keep the rule above for their own list and
-   items. Projects with bazis-permit protect users with a `PermitRouteBase` route instead
-   (keep the import of step 3).
+   watchers) subclasses `UserRouteSet` with `default_route = True` and widens
+   `restrict_queryset` for `view` only; any other operation goes to `super()`: a reverse
+   relation to the users (`Role.users` for `User.roles`, `Team.members` for a foreign key
+   of the user) changes the users it links and is checked with `change`, so a widened
+   `change` would let a user rewrite the relations of other users:
+
+   ```python
+   from bazis.contrib.users.routes import UserRouteSet as UserRouteSetBase
+   from bazis.core.schemas import CrudAccessAction
+
+   class UserRouteSet(UserRouteSetBase):
+       default_route = True
+
+       @classmethod
+       def restrict_queryset(cls, qs, access_action, user=None, **kwargs):
+           if access_action == CrudAccessAction.VIEW and getattr(user, 'is_authenticated', False):
+               return qs  # every user may be picked
+           return super().restrict_queryset(qs, access_action, user=user, **kwargs)
+   ```
+
+   It never raises (`user` may be None or anonymous). The user routes keep the rule above
+   for their own list and items. Projects with bazis-permit protect users with a
+   `PermitRouteBase` route instead (keep the import of step 3).
 5. The admin of the users: `UserAdminAbstract` (`bazis.contrib.users.admin_abstract`)
    before the `UserAdmin` of Django; with bazis-permit, `UserPermitAdminMixin`
    (`bazis.contrib.permit.admin_abstract`: the roles) first:

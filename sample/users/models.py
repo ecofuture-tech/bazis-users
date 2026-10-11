@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from django.db import models
+
 from bazis.contrib.users.models_abstract import (
     AnonymousUserAbstract,
     UserAbstract,
@@ -23,10 +25,14 @@ from bazis.core.models_abstract import JsonApiMixin, UuidMixin
 class User(JsonApiMixin, UuidMixin, UserLanguageMixin, UserAbstract):
     """
     Represents a user in the system, combining JSON API support, UUID functionality,
-    and user-specific attributes and methods.
+    and user-specific attributes and methods. The parent entity he is a member of: its
+    reverse relation `members` changes the users it links.
     """
 
-    pass
+    team = models.ForeignKey(
+        'entity.ParentEntity', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='members',
+    )
 
 
 class AnonymousUser(AnonymousUserAbstract):

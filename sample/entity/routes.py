@@ -62,6 +62,6 @@ class ParentEntityRouteSet(UserRouteBase):
     # add fields (extended_entity, dependent_entities) to schema
     fields = {
         None: SchemaFields(
-            include={'extended_entity': None, 'dependent_entities': None},
+            include={'extended_entity': None, 'dependent_entities': None, 'members': None},
         ),
     }

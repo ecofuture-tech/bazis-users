@@ -98,7 +98,9 @@ class UserRouteSet(UserOpenApiMixin, JsonapiRouteBase):
         for another one), their `included` and their filters through a relation (the core
         calls it on the class of the default route of the user model). Without a user (a
         route that has none) the authenticated user of the request
-        (`UserMixin.CTX_USER_REQUEST`). Never raises.
+        (`UserMixin.CTX_USER_REQUEST`). Never raises. A subclass whose users pick other
+        users widens it for `CrudAccessAction.VIEW` only and calls `super()` otherwise: a
+        reverse relation to the users changes the users it links (`change`).
         """
         if user is None:
             user = UserMixin.CTX_USER_REQUEST.get()
@@ -112,8 +114,8 @@ class UserRouteSet(UserOpenApiMixin, JsonapiRouteBase):
         """
         A user who is not staff sees and changes only himself: the rule of
         `UserRouteSet.restrict_queryset`, also in a subclass that overrides it (a project
-        whose users pick other users widens what the other routes link and show, not who
-        changes a user).
+        whose users pick other users widens what the other routes show and link for
+        `view`, not who changes a user).
         """
         return UserRouteSet.restrict_queryset(
             super().get_queryset(), CrudAccessAction.VIEW, user=self.inject.user

@@ -101,6 +101,14 @@ class ParentEntity(UserMixin, DtMixin, UuidMixin, JsonApiMixin, ParentEntityBase
         related_name='watched_parent_entities',
         blank=True,
     )
+    #: the owner: a foreign key to the users
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='owned_parent_entities',
+    )
 
     class Meta:
         """
