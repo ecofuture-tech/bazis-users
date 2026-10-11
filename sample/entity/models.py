@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -92,6 +93,12 @@ class ParentEntity(UserMixin, DtMixin, UuidMixin, JsonApiMixin, ParentEntityBase
     child_entities = models.ManyToManyField(
         ChildEntity,
         related_name='parent_entities',
+        blank=True,
+    )
+    #: users linked to the entity: the relationship links only the users the user sees
+    watchers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='watched_parent_entities',
         blank=True,
     )
 

@@ -22,9 +22,16 @@ from starlette.status import HTTP_403_FORBIDDEN
 from bazis.core.errors import JsonApi403Exception, SchemaErrors
 from bazis.core.routes_abstract.initial import inject_make
 from bazis.core.routes_abstract.jsonapi import JsonapiRouteBase
-from bazis.core.schemas import CrudApiAction, SchemaFields, SchemaInclusion, SchemaInclusions
+from bazis.core.schemas import (
+    CrudAccessAction,
+    CrudApiAction,
+    SchemaFields,
+    SchemaInclusion,
+    SchemaInclusions,
+)
 from bazis.core.schemas.enums import RouteKind
 
+from .models_abstract import UserMixin
 from .routes_abstract import UserOpenApiMixin
 from .service import get_user_required
 
@@ -82,14 +89,35 @@ class UserRouteSet(UserOpenApiMixin, JsonapiRouteBase):
     #: the fields only a superuser can set
     privileged_fields = ('is_staff', 'is_superuser', 'is_active')
 
+    @classmethod
+    def restrict_queryset(cls, qs, access_action, user=None, **kwargs):
+        """
+        The users a user sees and changes: staff every user, another authenticated user
+        only himself, nobody without authentication. The route's own list and items, and
+        for the other routes the users their relationships link (403 `ERR_RELATION_ACCESS`
+        for another one), their `included` and their filters through a relation (the core
+        calls it on the class of the default route of the user model). Without a user (a
+        route that has none) the authenticated user of the request
+        (`UserMixin.CTX_USER_REQUEST`). Never raises.
+        """
+        if user is None:
+            user = UserMixin.CTX_USER_REQUEST.get()
+        if getattr(user, 'is_authenticated', False) is not True:
+            return qs.none()
+        if user.is_staff:
+            return qs
+        return qs.filter(pk=user.pk)
+
     def get_queryset(self):
         """
-        A user who is not staff sees and changes only himself.
+        A user who is not staff sees and changes only himself: the rule of
+        `UserRouteSet.restrict_queryset`, also in a subclass that overrides it (a project
+        whose users pick other users widens what the other routes link and show, not who
+        changes a user).
         """
-        queryset = super().get_queryset()
-        if not self.inject.user.is_staff:
-            queryset = queryset.filter(pk=self.inject.user.pk)
-        return queryset
+        return UserRouteSet.restrict_queryset(
+            super().get_queryset(), CrudAccessAction.VIEW, user=self.inject.user
+        )
 
     def check_privileged_fields(self, item, before: dict):
         if self.inject.user.is_superuser:

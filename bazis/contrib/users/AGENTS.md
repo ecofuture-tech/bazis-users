@@ -62,8 +62,15 @@ project with users needs Setup and Rules.
 4. Optionally register the user routes: `router.register('bazis.contrib.users.router')`
    (`/user/`). With them a user sees and changes only himself, staff create, list and
    delete users, and only a superuser changes `is_staff`, `is_superuser`, `is_active`.
-   Projects with bazis-permit protect users with a `PermitRouteBase` route instead (keep
-   the import of step 3).
+   The same rule is the visibility of the users for the other routes (`restrict_queryset`
+   of `UserRouteSet`, bazis-users 2.9): a relationship of a user who is not staff links
+   only himself (another user is 403 `ERR_RELATION_ACCESS`), `included` and the filters
+   through a relation reach only him. A project whose users pick other users (assignees,
+   watchers) subclasses `UserRouteSet` with `default_route = True` and overrides
+   `restrict_queryset` (`cls, qs, access_action, user=None, **kwargs`; never raise, `user`
+   may be None or anonymous): the user routes keep the rule above for their own list and
+   items. Projects with bazis-permit protect users with a `PermitRouteBase` route instead
+   (keep the import of step 3).
 5. The admin of the users: `UserAdminAbstract` (`bazis.contrib.users.admin_abstract`)
    before the `UserAdmin` of Django; with bazis-permit, `UserPermitAdminMixin`
    (`bazis.contrib.permit.admin_abstract`: the roles) first:
