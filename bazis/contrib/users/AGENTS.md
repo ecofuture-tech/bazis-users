@@ -51,6 +51,32 @@ bazis-permit (permissions) and bazis-authing (login flows) build on it.
    Projects with bazis-permit protect users with a `PermitRouteBase` route instead (keep
    the import of step 3).
 
+### A foreign key of the user to a model of the project
+
+A user model with a foreign key to a model of another app of the project
+(`User.department = models.ForeignKey('org.Department', ...)`) makes the first migration
+of the users app depend on that app. When the migrations of that app depend on a package
+whose migrations depend on the user model (`settings.AUTH_USER_MODEL`): its models
+reference `uploadable.FileUpload` (the file has an author), `bg.Task`, or another model
+with an author, the migration graph is a cycle (`users.0001_initial` → `org.0001_initial`
+→ `uploadable.0004_fileupload_author` → `users.0001_initial`) and `makemigrations --check`
+and `migrate` fail with `CircularDependencyError`. `makemigrations` makes that cycle itself:
+it does not see the dependency of the package on the user model.
+
+Put the foreign key in a migration of its own, after the first ones:
+
+1. Comment the field out and run `makemigrations` (the users app, that app and the others):
+   the first migration of the users app no longer depends on that app.
+2. Restore the field and run `makemigrations users`: `000N_user_department` adds it and
+   depends on `('org', '0001_initial')`.
+
+`makemigrations --check` is then clean and `migrate` applies the field last. If the
+migrations exist already, remove the field and the dependency on the app from the first
+migration of the users app by hand and add the `AddField` in a new migration that depends
+on the last migration of the users app and on the migration of the app that creates the
+model. The same holds for any model of the project that the user references and that
+references a model with an author.
+
 ## Authentication
 
 - `POST BAZIS_OPENAPI_TOKEN_URL` (default `/api/openapi-token/`, OAuth2 password form,
