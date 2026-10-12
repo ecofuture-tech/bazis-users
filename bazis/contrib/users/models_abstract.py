@@ -247,6 +247,17 @@ class UserMixin(JsonApiMixin):
     #: Context variable in which the current active user can be stored
     CTX_USER_REQUEST: ContextVar['UserMixin'] = ContextVar('CTX_USER_REQUEST', default=None)
 
+    @classmethod
+    def authenticated_user(cls, user=None):
+        """
+        The user if he is authenticated; without one (None), the authenticated user of the
+        request (`CTX_USER_REQUEST`). None for an anonymous user or none: e.g. in
+        `restrict_queryset`, which the core also calls on a route class without a user.
+        """
+        if user is None:
+            user = cls.CTX_USER_REQUEST.get()
+        return user if getattr(user, 'is_authenticated', False) is True else None
+
     class Meta:
         """
         Meta class for UserMixin, setting the model as abstract.

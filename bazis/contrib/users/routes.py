@@ -102,9 +102,7 @@ class UserRouteSet(UserOpenApiMixin, JsonapiRouteBase):
         users widens it for `CrudAccessAction.VIEW` only and calls `super()` otherwise: a
         reverse relation to the users changes the users it links (`change`).
         """
-        if user is None:
-            user = UserMixin.CTX_USER_REQUEST.get()
-        if getattr(user, 'is_authenticated', False) is not True:
+        if (user := UserMixin.authenticated_user(user)) is None:
             return qs.none()
         if user.is_staff:
             return qs
