@@ -15,10 +15,12 @@
 from dataclasses import dataclass
 
 from django.conf import settings
+from django.contrib.auth import authenticate
+from django.contrib.auth.signals import user_logged_in
 from django.utils.translation import gettext_lazy as _
 
-from fastapi import Cookie, Depends, HTTPException, Query
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Cookie, Depends, HTTPException, Query, Request
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from starlette.status import HTTP_401_UNAUTHORIZED
 
@@ -159,3 +161,20 @@ def get_user_optional(user: User = Depends(get_user_from_token)) -> User | Anony
     if not user:
         return AnonymousUser()
     return user
+
+
+def token_auth(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    The token endpoint (`bazis.contrib.users.token` declares it on the application):
+    verifies the credentials of the OAuth2 password form and answers a session JWT; 401
+    for wrong credentials. Defined here, without the application, so that another router
+    registers it too (bazis-authing) without importing the application.
+    """
+    if not (user := authenticate(username=form_data.username, password=form_data.password)):
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED,
+            detail=_('Credentials are invalid'),
+            headers={'WWW-Authenticate': 'Bearer'},
+        )
+    user_logged_in.send(sender=user.__class__, request=request, user=user)
+    return {'access_token': user.jwt_build(auth_type='password'), 'token_type': 'bearer'}
