@@ -174,7 +174,8 @@ references a model with an author.
   the user (bazis-permit routes extend it).
 - `UserRequiredRouteBase`: the same, for routes that require authentication.
 - FastAPI dependencies in `bazis.contrib.users.service`: `get_user_optional`,
-  `get_user_required`, `get_token_data`.
+  `get_user_required`, `get_token_data`, and `get_request_tokens` (the tokens of the
+  request undecoded: `RequestTokens.token` is the one it presents).
 
 ## The language of a user
 

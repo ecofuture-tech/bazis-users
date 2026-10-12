@@ -128,9 +128,10 @@ def test_token_without_expiration_is_anonymous(sample_app, user):
     A token without expiration identifies nobody (it is not a session token, e.g. the
     authorization store token of bazis-authing in the same cookie).
     """
-    from bazis.contrib.users.service import get_token_data
+    from bazis.contrib.users.service import get_token_data, session_token_data
 
     token = _token({'sub': user.username})
+    assert session_token_data(token) == {}
     assert get_token_data(token_header=None, token_param=None, token_cookie=token) == {}
     assert _get_me(sample_app, token).status_code == 401
 
@@ -161,3 +162,16 @@ def test_user_cannot_grant_himself_groups(sample_app, user):
     )
     assert response.status_code == 403
     assert not user.user_permissions.exists()
+
+
+def test_the_token_of_a_request():
+    """
+    The query parameter, else the bearer token, else the cookie: bazis-authing reads its
+    store token in the same order.
+    """
+    from bazis.contrib.users.service import RequestTokens
+
+    assert RequestTokens(header='h', param='p', cookie='c').token == 'p'
+    assert RequestTokens(header='h', cookie='c').token == 'h'
+    assert RequestTokens(cookie='c').token == 'c'
+    assert RequestTokens().token is None

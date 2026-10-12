@@ -229,7 +229,22 @@ def my_endpoint(token: dict = Depends(get_token_data)):
 ```
 
 `decode_token(token)` verifies a token outside of a request and raises
-`jwt.ExpiredSignatureError` / `jwt.InvalidTokenError`.
+`jwt.ExpiredSignatureError` / `jwt.InvalidTokenError`; `session_token_data(token)` is the
+result of `get_token_data` for a token (`{}`, the data, or 401).
+
+#### get_request_tokens
+
+The tokens of the request without decoding them: `RequestTokens` with `header`, `param`,
+`cookie` and `token`, the one the request presents (the query parameter, else the bearer
+token, else the cookie). For an endpoint that treats the tokens its own way (bazis-authing
+reads its store token from them).
+
+```python
+from bazis.contrib.users.service import RequestTokens, get_request_tokens
+
+def my_endpoint(tokens: RequestTokens = Depends(get_request_tokens)):
+    ...
+```
 
 #### get_user_from_token
 
