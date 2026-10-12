@@ -202,7 +202,9 @@ references a model with an author.
   and saves the language of its interface there.
 - The language of a request is still `?lang` or `Accept-Language` (the `LanguageMiddleware`
   of the core), not the profile. Work done for a user outside his requests (e-mails,
-  background tasks) uses `translation.override(user.language or settings.LANGUAGE_CODE)`.
+  background tasks) runs in his language with `in_user_language(user)`
+  (`bazis.contrib.users.models_abstract`, bazis-users 2.9): `translation.override` of
+  `user.language`, else `LANGUAGE_CODE`, also for a user model without the mixin.
 
 ## Rules
 

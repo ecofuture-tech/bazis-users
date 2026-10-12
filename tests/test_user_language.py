@@ -166,6 +166,25 @@ def test_the_schema_lists_the_languages_of_the_project(sample_app, user):
     assert language['nullable'] is True
 
 
+def test_the_work_for_a_user_in_his_language():
+    """
+    `in_user_language`: the language of the user, else LANGUAGE_CODE, also for a user
+    without the field.
+    """
+    from types import SimpleNamespace
+
+    from django.utils import translation
+
+    from bazis.contrib.users.models_abstract import in_user_language
+
+    with in_user_language(User(language='ru')):
+        assert translation.get_language() == 'ru'
+    with in_user_language(User(language=None)):
+        assert translation.get_language() == settings.LANGUAGE_CODE
+    with in_user_language(SimpleNamespace()):
+        assert translation.get_language() == settings.LANGUAGE_CODE
+
+
 def test_the_language_is_opt_in():
     """
     A user model on UserAbstract alone has no language: adding the field needs a migration

@@ -26,6 +26,7 @@ from django.contrib.auth.signals import user_logged_in
 from django.contrib.gis.db import models
 from django.db import IntegrityError, transaction
 from django.dispatch import receiver
+from django.utils import translation
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 
@@ -141,6 +142,15 @@ def language_code(value: str | None) -> str | None:
     if code := languages.get(value) or languages.get(value.split('-')[0]):
         return code
     raise ValueError(value)
+
+
+def in_user_language(user) -> translation.override:
+    """
+    `translation.override` in the language of the user: his `language`
+    (`UserLanguageMixin`), else LANGUAGE_CODE (also for a user model without the mixin).
+    For the work done for a user outside his requests: e-mails, notifications, tasks.
+    """
+    return translation.override(getattr(user, 'language', None) or settings.LANGUAGE_CODE)
 
 
 #: the language of a user loaded without it (deferred)

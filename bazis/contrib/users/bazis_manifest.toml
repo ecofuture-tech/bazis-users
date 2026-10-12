@@ -23,6 +23,11 @@ import = "bazis.contrib.users.models_abstract.UserLanguageMixin"
 use_when = "the users choose their language (language: a code of LANGUAGES or None), e.g. kept by bazis-front"
 
 [[extension_points]]
+name = "in_user_language"
+import = "bazis.contrib.users.models_abstract.in_user_language"
+use_when = "work done for a user outside his requests (e-mails, notifications, tasks) in his language"
+
+[[extension_points]]
 name = "UsersConfig"
 import = "bazis.contrib.users.apps.UsersConfig"
 use_when = "the AppConfig of the project app that holds the user model"
