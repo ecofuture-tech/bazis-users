@@ -226,17 +226,7 @@ class AnonymousUserAbstract(BaseAnonymousUser):
     last_name = ''
     email = ''
 
-    def get_full_name(self):
-        """
-        Returns the full name of the anonymous user, combining first and last name if
-        available, otherwise returns the username.
-        """
-        full_name = ''
-        if self.first_name:
-            full_name = self.first_name
-        if self.last_name:
-            full_name += ' ' + self.last_name
-        return full_name.strip() or self.username
+    get_full_name = UserAbstract.get_full_name
 
 
 class UserMixin(JsonApiMixin):

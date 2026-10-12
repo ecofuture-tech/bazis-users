@@ -15,7 +15,7 @@
 import pytest
 from bazis_test_utils.utils import get_api_client
 
-from bazis.contrib.users import get_user_model
+from bazis.contrib.users import get_anonymous_user_model, get_user_model
 
 
 User = get_user_model()
@@ -111,3 +111,13 @@ def test_only_staff_creates_users(sample_app, people):
     del payload['data']['attributes']['is_superuser']
     response = get_api_client(sample_app, staff.jwt_build()).post('/api/v1/users/user/', json_data=payload)
     assert response.status_code == 201
+
+
+def test_the_full_name():
+    """
+    The first and the last name, else the username; the anonymous user has the same rule.
+    """
+    assert User(username='u', first_name='First', last_name='Last').get_full_name() == 'First Last'
+    assert User(username='u', last_name='Last').get_full_name() == 'Last'
+    assert User(username='u').get_full_name() == 'u'
+    assert get_anonymous_user_model()().get_full_name() == ''
