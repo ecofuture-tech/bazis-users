@@ -314,3 +314,62 @@ def test_a_subclass_that_widens_the_view_only(sample_app, people, monkeypatch):
 
     # the routes of bazis-users keep their rule for their own items (not the default route)
     assert client.get(f'/api/v1/users/user/{other.id}/').status_code == 404
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_routed_subclass_keeps_the_rule_for_its_own_items(people, monkeypatch):
+    """
+    A routed subclass that widens `restrict_queryset` for `view` (the users of the other
+    routes) keeps the rule of bazis-users for its own list, items and update: its
+    `get_queryset` applies `UserRouteSet.restrict_queryset`, not the widened one.
+    """
+    from bazis.contrib.users.routes import UserRouteSet
+    from bazis.core.app_factory import _create_app_base, _initialize_app
+    from bazis.core.routing import BazisRouter
+
+    # the class defined below becomes the default route of the users: restored after
+    monkeypatch.setattr(User, '_default_route', User.get_default_route())
+
+    class PickerUserRouteSet(UserRouteSet):
+        @classmethod
+        def restrict_queryset(cls, qs, access_action, user=None, **kwargs):
+            if access_action == CrudAccessAction.VIEW and getattr(user, 'is_authenticated', False):
+                return qs
+            return super().restrict_queryset(qs, access_action, user=user, **kwargs)
+
+    router = BazisRouter(prefix='/picker')
+    router.register(PickerUserRouteSet.as_router())
+    # an application of its own with the handlers of Bazis (and the project routes)
+    app = _create_app_base()
+    app.include_router(router)
+    _initialize_app(app)
+    staff, user, other = people
+    url = '/picker/users/user/'
+
+    # the other routes see every user through it
+    assert PickerUserRouteSet.restrict_queryset(
+        User.objects.all(), CrudAccessAction.VIEW, user=user
+    ).count() == 3
+
+    client = get_api_client(app, user.jwt_build())
+    response = client.get(url)
+    assert response.status_code == 200, response.text
+    assert [it['id'] for it in response.json()['data']] == [str(user.id)]
+    assert client.get(f'{url}{other.id}/').status_code == 404
+    response = client.patch(
+        f'{url}{other.id}/',
+        json_data={
+            'data': {
+                'id': str(other.id),
+                'type': 'users.user',
+                'bs:action': 'change',
+                'attributes': {'first_name': 'Hijacked'},
+            }
+        },
+    )
+    assert response.status_code == 404, response.text
+    other.refresh_from_db()
+    assert other.first_name != 'Hijacked'
+
+    response = get_api_client(app, staff.jwt_build()).get(url)
+    assert len(response.json()['data']) == 3
