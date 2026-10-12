@@ -42,6 +42,31 @@ def people():
 
 
 @pytest.mark.django_db(transaction=True)
+def test_the_attributes_of_a_user(sample_app, people):
+    """
+    Without a token the user routes are 401; a user reads his flags, and his password only
+    masked.
+    """
+    superuser, _, user, _ = people
+    anonymous = get_api_client(sample_app)
+    assert anonymous.get('/api/v1/users/user/').status_code == 401
+    assert anonymous.get(f'/api/v1/users/user/{user.id}/').status_code == 401
+
+    for actor, privileged in ((superuser, True), (user, False)):
+        response = get_api_client(sample_app, actor.jwt_build()).get(
+            f'/api/v1/users/user/{actor.id}/'
+        )
+        assert response.status_code == 200
+        data = response.json()['data']
+        assert (data['id'], data['type']) == (str(actor.id), 'users.user')
+        assert data['attributes']['is_active'] is True
+        assert data['attributes']['is_staff'] is privileged
+        assert data['attributes']['is_superuser'] is privileged
+        assert data['attributes']['raw_password'] == '**********'
+        assert 'password' not in data['attributes']
+
+
+@pytest.mark.django_db(transaction=True)
 def test_user_sees_and_changes_only_himself(sample_app, people):
     """
     Any authenticated user could list, change (including the password) and delete any

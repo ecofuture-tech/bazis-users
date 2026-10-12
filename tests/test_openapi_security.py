@@ -128,12 +128,11 @@ def refs_of(operation, status):
     }
 
 
-def test_no_dict_data_route(operations):
+def test_no_forbidden_of_user_route_base(operations):
     """
-    UserRouteBase has no `/{item_id}/dict_data/` (all the attributes of an item, past the
-    schema of the route) and no 403 of its own.
+    UserRouteBase has no 403 of its own (the 404 of `dict_data`, which had one, is
+    `test_dict_data_is_not_a_route`).
     """
-    assert not [path for path, _ in operations if path.endswith('/dict_data/')]
     for prefix in (f'{ENTITY}/parent_entity', f'{ENTITY}/extended_entity'):
         for (path, method), operation in route_operations(operations, prefix).items():
             if operation['x-bazis']['kind'] == 'relationship':
