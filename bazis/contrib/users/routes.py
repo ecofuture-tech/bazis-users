@@ -35,8 +35,9 @@ from .models_abstract import UserMixin
 from .routes_abstract import UserOpenApiMixin
 from .service import get_user_required
 
-# the token endpoint is declared on the application with the user routes, as before (and
-# `token_auth` keeps its import path)
+# importing the module declares the token endpoint on the application with the user
+# routes; the name `token_auth` stays importable from here for the projects written for
+# bazis-users < 2.6.1: remove the name in 3.0 and keep the import of the module
 from .token import token_auth  # noqa: F401
 
 

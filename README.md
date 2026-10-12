@@ -176,7 +176,7 @@ Provides base functionality for creating routes that work with user models.
 Basic token authentication (JWT), applied in Swagger UI.
 
 **Location**: `bazis.contrib.users.token.token_auth` (also importable from
-`bazis.contrib.users.routes`)
+`bazis.contrib.users.routes` until 3.0)
 
 Enables JWT token authentication in Swagger UI. `POST BAZIS_OPENAPI_TOKEN_URL` is a route
 of the application: import `bazis.contrib.users.token` in the router module of the project
