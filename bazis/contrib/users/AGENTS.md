@@ -193,8 +193,10 @@ references a model with an author.
   a callable (`language_choices`), so a change of `LANGUAGES` needs no migration.
 - The user reads and changes it himself: the attribute `language` of the user routes
   (`PATCH /user/{id}/`); a project that routes the users with bazis-permit grants the field.
-  Saving stores the code of `LANGUAGES` (`ru` of `ru-RU`, `RU`; blank is None); another
-  language is a 422 with the pointer `/data/attributes/language`, whatever route saves it.
+  The routes accept only a code of `LANGUAGES` (the choices of the field, the `enum` of
+  its schema; blank is None): another value, also `ru-RU` or `RU`, is a 422 with the
+  pointer `/data/attributes/language` (bazis 2.18). Saving in the code stores the code of
+  `LANGUAGES` (`ru` of `ru-RU`, `RU`; blank is None); another language is the same 422.
   Only a language being written is checked: a stored language the project no longer has
   (removed from `LANGUAGES`) stays until it is changed, and the login and the other saves
   pass.

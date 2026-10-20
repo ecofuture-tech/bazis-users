@@ -34,7 +34,7 @@ classifiers = [
 ]
 dependencies = [
     # 2.11: the core has no dict_data route either (UserRouteBase no longer overrides it)
-    "bazis>=2.11.0",
+    "bazis>=2.18.0",
     "python-multipart>=0.0.18",
     "PyJWT>=2.10",
 ]
