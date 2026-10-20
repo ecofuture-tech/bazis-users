@@ -189,9 +189,10 @@ class UserLanguageMixin(InitialBase):
 
     def save(self, *args, **kwargs):
         """
-        A language written (changed and saved) is stored as the code of LANGUAGES; another
-        language is a validation error of the attribute `language` (422), whatever route
-        writes it (the core does not validate the choices). A stored language the project
+        A language written (changed and saved) is stored as the code of LANGUAGES (`ru` of
+        `ru-RU`); another language is a validation error of the attribute `language` (422).
+        The routes refuse a value that is not a code of LANGUAGES before this (the choices
+        of the field, bazis 2.18); this is for the code that saves a user. A stored language the project
         no longer has stays until it is changed: the other saves (the login, a new
         password) do not check it.
         """

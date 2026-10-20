@@ -61,8 +61,16 @@ def test_user_reads_and_changes_his_language(sample_app, user):
     assert user.language == 'ru'
     assert client.get(url).json()['data']['attributes']['language'] == 'ru'
 
-    # the code of LANGUAGES of a regional or differently written code
-    assert client.patch(url, json_data=_patch(user, language='RU_ru')).status_code == 200
+    # the routes take the codes of LANGUAGES (the enum of the schema), not a regional one
+    response = client.patch(url, json_data=_patch(user, language='RU_ru'))
+    assert response.status_code == 422, response.text
+    assert response.json()['errors'][0]['source']['pointer'] == '/data/attributes/language'
+    user.refresh_from_db()
+    assert user.language == 'ru'
+
+    # the code of LANGUAGES of a regional or differently written code, saved by the code
+    user.language = 'RU_ru'
+    user.save()
     user.refresh_from_db()
     assert user.language == 'ru'
 
@@ -83,8 +91,8 @@ def test_a_language_the_project_does_not_have(sample_app, user):
 
     assert response.status_code == 422, response.text
     [error] = response.json()['errors']
-    assert error['source'] == {'pointer': '/data/attributes/language'}
-    assert 'en, ru' in error['detail']
+    assert error['source']['pointer'] == '/data/attributes/language'
+    assert 'valid choice' in error['detail']
     user.refresh_from_db()
     assert user.language is None
 
@@ -122,6 +130,12 @@ def test_a_stale_language_does_not_block_the_user(sample_app, user):
     user.save()
 
     assert User.objects.get(pk=user.pk).language == 'de'
+
+    # the routes refuse it as any value that is not a choice, also sent back unchanged
+    response = client.patch(
+        f'/api/v1/users/user/{user.id}/', json_data=_patch(user, language='de')
+    )
+    assert response.status_code == 422, response.text
 
     # writing it validates it
     user.language = 'fr'
