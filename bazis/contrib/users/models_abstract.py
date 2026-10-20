@@ -200,6 +200,15 @@ class UserLanguageMixin(InitialBase):
         written = 'language' in self.__dict__ and (
             update_fields is None or 'language' in update_fields
         )
+        if written and self._language_stored is _NOT_LOADED:
+            # deferred, then set by a loader that does not refresh the instance (FETCH_PEERS)
+            self._language_stored = (
+                type(self)
+                ._base_manager.using(self._state.db)
+                .filter(pk=self.pk)
+                .values_list('language', flat=True)
+                .first()
+            )
         if written and self.language != self._language_stored:
             try:
                 self.language = language_code(self.language)
