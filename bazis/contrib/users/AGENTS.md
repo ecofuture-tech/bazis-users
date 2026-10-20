@@ -199,7 +199,8 @@ references a model with an author.
   `LANGUAGES` (`ru` of `ru-RU`, `RU`; blank is None); another language is the same 422.
   Only a language being written is checked: a stored language the project no longer has
   (removed from `LANGUAGES`) stays until it is changed, and the login and the other saves
-  pass.
+  pass; but a request that sends that language back, even unchanged, is refused by the
+  routes as any value that is not a choice.
 - bazis-front detects the field (`profile_language` of its contract), adopts it at a login
   and saves the language of its interface there.
 - The language of a request is still `?lang` or `Accept-Language` (the `LanguageMiddleware`

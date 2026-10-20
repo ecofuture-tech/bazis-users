@@ -131,6 +131,12 @@ def test_a_stale_language_does_not_block_the_user(sample_app, user):
 
     assert User.objects.get(pk=user.pk).language == 'de'
 
+    # the routes refuse it as any value that is not a choice, also sent back unchanged
+    response = client.patch(
+        f'/api/v1/users/user/{user.id}/', json_data=_patch(user, language='de')
+    )
+    assert response.status_code == 422, response.text
+
     # writing it validates it
     user.language = 'fr'
     with pytest.raises(JsonApiBazisException):
