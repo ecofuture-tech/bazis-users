@@ -25,6 +25,7 @@ import sys
 from pathlib import Path
 
 from django.conf import settings
+from django.db.models import FETCH_PEERS
 
 from fastapi.testclient import TestClient
 
@@ -144,6 +145,32 @@ def test_a_stale_language_does_not_block_the_user(sample_app, user):
     deferred.language = 'fr'
     with pytest.raises(JsonApiBazisException):
         deferred.save()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_stale_language_loaded_later_does_not_block_the_save(user):
+    """
+    The language is deferred and loaded afterwards, by the access to the attribute (one
+    user) or together with the other users of the queryset (FETCH_PEERS: the value is set
+    without `refresh_from_db`): the stored language is still known, so a full save passes.
+    """
+    User.objects.filter(pk=user.pk).update(language='de')
+    other = User.objects.create_user('other', password='weak_password_1')
+    User.objects.filter(pk=other.pk).update(language='de')
+
+    one = User.objects.defer('language').get(pk=user.pk)
+    assert one.language == 'de'
+    one.save()
+
+    for loaded in User.objects.defer('language').fetch_mode(FETCH_PEERS):
+        assert loaded.language == 'de'
+        loaded.first_name = 'Me'
+        loaded.save()
+        loaded.language = 'fr'
+        with pytest.raises(JsonApiBazisException):
+            loaded.save()
+
+    assert set(User.objects.values_list('language', flat=True)) == {'de'}
 
 
 @pytest.mark.django_db(transaction=True)
