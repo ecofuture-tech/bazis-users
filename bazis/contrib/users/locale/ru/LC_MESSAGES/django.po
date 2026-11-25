@@ -70,11 +70,11 @@ msgstr "Пользователи"
 
 #: routes.py:29
 msgid "Credentials are invalid"
-msgstr "Учетные данные недействительны"
+msgstr "Учётные данные недействительны"
 
 #: service.py:36
 msgid "Token expired"
-msgstr "Срок действия токена истек"
+msgstr "Срок действия токена истёк"
 
 #: service.py:61
 msgid "Token is invalid"
